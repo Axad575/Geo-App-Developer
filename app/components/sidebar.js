@@ -26,6 +26,11 @@ export default function Sidebar() {
         console.log("Developers button clicked");
         router.push("/pages/devScreen");
     };
+    const subscriptionsBtn = (e) => {
+        e.preventDefault();
+        console.log("Subscriptions button clicked");
+        router.push("/pages/subscriptions");
+    };
 
 
 
@@ -46,6 +51,9 @@ export default function Sidebar() {
           </button>
           <button onClick={devBtn} className="bg-green-400 text-black py-2 rounded-md hover:bg-green-300 transition">
             Разработчики
+          </button>
+          <button onClick={subscriptionsBtn} className="bg-green-400 text-black py-2 rounded-md hover:bg-green-300 transition">
+            Подписки
           </button>
 
           

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/app/api/firebase';
 import Sidebar from '@/app/components/sidebar';
@@ -78,6 +78,19 @@ export default function OrganizationsPage() {
 
             const orgRef = await addDoc(collection(db, 'organizations'), orgData);
 
+            // Initialize subscription with 30-day trial
+            const trialEndDate = new Date();
+            trialEndDate.setDate(trialEndDate.getDate() + 30);
+            
+            await setDoc(doc(db, `organizations/${orgRef.id}/subscription/current`), {
+                plan: 'enterprise',
+                status: 'trial',
+                startDate: new Date().toISOString(),
+                endDate: trialEndDate.toISOString(),
+                createdAt: new Date().toISOString(),
+                createdBy: currentUser?.uid
+            });
+
             // Initialize subcollections with placeholder documents
             if (form.initUsers) {
                 await addDoc(collection(db, `organizations/${orgRef.id}/users`), {
@@ -100,7 +113,7 @@ export default function OrganizationsPage() {
 
             resetForm();
             fetchOrganizations();
-            alert('Организация успешно создана!');
+            alert('Организация успешно создана с 30-дневным пробным периодом!');
         } catch (err) {
             console.error('Error creating organization:', err);
             setError(err.message || String(err));
@@ -179,6 +192,52 @@ export default function OrganizationsPage() {
         setError(null);
     };
 
+    const initializeSubscriptions = async () => {
+        if (!window.confirm('Инициализировать подписки для всех организаций без подписки? Каждая получит 30-дневный пробный период.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            let initializedCount = 0;
+
+            for (const org of organizations) {
+                // Check if subscription exists
+                const subDocRef = doc(db, `organizations/${org.id}/subscription/current`);
+                const subDocSnap = await getDoc(subDocRef);
+                
+                if (!subDocSnap.exists()) {
+                    // Create trial subscription
+                    const trialEndDate = new Date();
+                    trialEndDate.setDate(trialEndDate.getDate() + 30);
+                    
+                    await setDoc(subDocRef, {
+                        plan: 'enterprise',
+                        status: 'trial',
+                        startDate: org.createdAt || new Date().toISOString(),
+                        endDate: trialEndDate.toISOString(),
+                        createdAt: new Date().toISOString(),
+                        createdBy: currentUser?.uid
+                    });
+                    
+                    initializedCount++;
+                }
+            }
+
+            if (initializedCount === 0) {
+                alert('У всех организаций уже есть подписки!');
+            } else {
+                alert(`Подписки инициализированы для ${initializedCount} ${initializedCount === 1 ? 'организации' : 'организаций'}!`);
+            }
+            fetchOrganizations();
+        } catch (error) {
+            console.error('Error initializing subscriptions:', error);
+            alert(`Ошибка инициализации: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return '—';
         return new Date(dateString).toLocaleDateString('ru-RU', {
@@ -203,15 +262,27 @@ export default function OrganizationsPage() {
                                 <h1 className="text-2xl font-bold text-gray-900">Управление организациями</h1>
                                 <p className="text-gray-600">Создание и управление организациями системы</p>
                             </div>
-                            <button
-                                onClick={() => {
-                                    resetForm();
-                                    setIsModalOpen(true);
-                                }}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-                            >
-                                + Создать организацию
-                            </button>
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={initializeSubscriptions}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                                    disabled={loading}
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>Инициализировать подписки</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        resetForm();
+                                        setIsModalOpen(true);
+                                    }}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                                >
+                                    + Создать организацию
+                                </button>
+                            </div>
                         </div>
                     </div>
 
