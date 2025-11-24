@@ -31,7 +31,11 @@ export default function Sidebar() {
         console.log("Subscriptions button clicked");
         router.push("/pages/subscriptions");
     };
-
+    const ticketsBtn = (e) => {
+        e.preventDefault();
+        console.log("Tickets button clicked");
+        router.push("/pages/tickets");
+    }
 
 
   return (
@@ -54,6 +58,9 @@ export default function Sidebar() {
           </button>
           <button onClick={subscriptionsBtn} className="bg-green-400 text-black py-2 rounded-md hover:bg-green-300 transition">
             Подписки
+          </button>
+          <button onClick={ticketsBtn} className="bg-green-400 text-black py-2 rounded-md hover:bg-green-300 transition">
+          {t('nav.tickets')}
           </button>
 
           
